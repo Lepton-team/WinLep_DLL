@@ -5,6 +5,8 @@
 
 #include <memory>
 
+// UUID: b1e75cb3-ad2a-40ed-a836-f06f3f32a8b9
+
 namespace lepton {
 	class LeptonPropertyHandler : public IPropertyStore, public IInitializeWithStream {
 	public:

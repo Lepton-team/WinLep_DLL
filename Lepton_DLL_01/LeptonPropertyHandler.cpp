@@ -125,14 +125,14 @@ IFACEMETHODIMP LeptonPropertyHandler::SetValue(REFPROPERTYKEY key, REFPROPVARIAN
 	// All properties are read-only.
 	// According to MSDN, STG_E_INVALIDARG should be returned,
 	// but that doesn't exist, so this is close enough.
-	return STG_E_INVALIDPARAMETER;
+	return STG_E_ACCESSDENIED;//STG_E_INVALIDPARAMETER;
 }
 
 IFACEMETHODIMP LeptonPropertyHandler::Commit() {
 	// All properties are read-only.
 	// According to MSDN, STG_E_INVALIDARG should be returned,
 	// but that doesn't exist, so this is close enough.
-	return STG_E_INVALIDPARAMETER;
+	return STG_E_ACCESSDENIED;//STG_E_INVALIDPARAMETER;
 }
 
 HRESULT LeptonPropertyHandler::loadProperties() {

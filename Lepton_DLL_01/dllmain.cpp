@@ -12,13 +12,20 @@
 #include "dllmain.h"
 
 // Generated UUID: d0385023-d398-4b09-89a2-aa1ade3cdfe7
-#define SZ_CLSID_LEPTON_THUMBNAIL_HANDLER L"{d0385023-d398-4b09-89a2-aa1ade3cdfe7}"
-//#define SZ_LEPTON_THUMBNAIL_HANDLER = L"Lepton Thumbnail Handler"
-#define THUMBNAIL_IMAGE_HANDLER_SUBKEY L"{E357FCCD-A995-4576-B01F-234630154E96}"
+#define szCLSID_LEPTON_THUMBNAIL_HANDLER L"{d0385023-d398-4b09-89a2-aa1ade3cdfe7}"
+#define szLEPTON_THUMBNAIL_HANDLER L"Lepton Thumbnail Handler"
+#define szTHUMBNAIL_IMAGE_HANDLER_SUBKEY L"{E357FCCD-A995-4576-B01F-234630154E96}"
+
+#define szCLSID_LEPTON_PROPERTY_HANDLER L"{b1e75cb3-ad2a-40ed-a836-f06f3f32a8b9}"
+#define szLEPTON_PROPERTY_HANDLER L"Lepton Property Handler"
+
+//TODO: file extsion name ... For now it's .lep // FIXME
+#define szFILE_EXTENSION L".lep"
 
 unsigned long dllRefCount = 0;
 
 const CLSID CLSID_LeptonThumbnailProvider = { 0xd0385023, 0xd398, 0x4b09, {0x89, 0xa2, 0xaa, 0x1a, 0xde, 0x3c, 0xdf, 0xe7} };
+const CLSID CLSID_LeptonPropertyHandler = { 0xb1e75cb3, 0xad2a, 0x40ed, {0xa8, 0x36, 0xf0, 0x6f, 0x3f, 0x32, 0xa8, 0xb9} };
 
 // hInstance = "handle to an instance"
 // The operating system uses this value to identify the executable when it is loaded in memory.
@@ -69,24 +76,41 @@ STDAPI DllRegisterServer() {
 	//Register lepton thumbnail provider
 	//TODO: file extsion name ... For now it's .lep // FIXME
 	REGKEY_SUBKEY_AND_VALUE thumbnailProviderKeys[] = {
-		{HKEY_CLASSES_ROOT, L"CLSID\\" SZ_CLSID_LEPTON_THUMBNAIL_HANDLER, nullptr, REG_SZ, (DWORD_PTR)L"Lepton Thumbnail Provider"},
-		{HKEY_CLASSES_ROOT, L"CLSID\\" SZ_CLSID_LEPTON_THUMBNAIL_HANDLER L"\\InprocServer32", L"ThreadingModel", REG_SZ, (DWORD_PTR)L"Apartment"},
-		{HKEY_CLASSES_ROOT, L".lep\\shellex\\" THUMBNAIL_IMAGE_HANDLER_SUBKEY, nullptr, REG_SZ, (DWORD_PTR)SZ_CLSID_LEPTON_THUMBNAIL_HANDLER}
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER, nullptr, REG_SZ, (DWORD_PTR)szLEPTON_THUMBNAIL_HANDLER},
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER L"\\InprocServer32", L"ThreadingModel", REG_SZ, (DWORD_PTR)L"Apartment"},
+		{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY, nullptr, REG_SZ, (DWORD_PTR)szCLSID_LEPTON_THUMBNAIL_HANDLER}
 	};
 
 	result = createRegistryKeys(thumbnailProviderKeys, ARRAYSIZE(thumbnailProviderKeys));
 
 	if (FAILED(result)) {
 		REGKEY_DELETEKEY keysToDelete[] = {
-			{HKEY_CLASSES_ROOT, L".lep\\shellex\\" THUMBNAIL_IMAGE_HANDLER_SUBKEY},
-			{HKEY_CLASSES_ROOT, L"CLSID\\" SZ_CLSID_LEPTON_THUMBNAIL_HANDLER}
+			{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY},
+			{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER}
 		};
 
 		deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
 		return result;
 	}
 
-	//TODO: Register property handler
+	REGKEY_SUBKEY_AND_VALUE propertyProviderKeys[] = {
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER, nullptr, REG_SZ, (DWORD_PTR)szLEPTON_PROPERTY_HANDLER},
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER L"\\InprocServer32", L"ThreadingModel", REG_SZ, (DWORD_PTR)L"Apartment"},
+		{HKEY_CLASSES_ROOT, szFILE_EXTENSION, L"PerceivedType", REG_SZ, (DWORD_PTR)L"Image"},
+		{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION, nullptr, REG_SZ, (DWORD_PTR)szCLSID_LEPTON_PROPERTY_HANDLER},
+	};
+
+	result = createRegistryKeys(propertyProviderKeys, ARRAYSIZE(propertyProviderKeys));
+
+	if (FAILED(result)) {
+		REGKEY_DELETEKEY keysToDelete[] = {
+			{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION},
+			{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER},
+		};
+
+		deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
+		return result;
+	}
 
 	// Notify shell about association changes
 	SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
@@ -102,18 +126,19 @@ STDAPI DllUnregisterServer() {
 	}
 
 	REGKEY_DELETEKEY keysToDelete[] = {
-		{HKEY_CLASSES_ROOT, L"CLSID\\" SZ_CLSID_LEPTON_THUMBNAIL_HANDLER},
-		//{} //TODO: Property handler
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER},
+		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER},
 	};
 
 	HRESULT result = deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
 
 	// TODO: Filename extension!
-	REGKEY_DELETEKEY keys2[] = {
-		{ HKEY_CLASSES_ROOT, L".lep\\shellex\\" THUMBNAIL_IMAGE_HANDLER_SUBKEY},
-		//{ HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\.kra" },
+	REGKEY_DELETEKEY keysToDelete2[] = {
+		{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY},
+		{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION},
 	};
-	deleteRegistryKeys(keys2, ARRAYSIZE(keys2));
+
+	deleteRegistryKeys(keysToDelete2, ARRAYSIZE(keysToDelete2));
 
 	return result;
 }
@@ -179,7 +204,7 @@ HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE* key) {
 	}
 
 	if (SUCCEEDED(res)) {
-		LSTATUS status = SHSetValue(key->hKey, key->lpszSubKey, key->lpszValue, key->dwType, data, dataSize);
+		LSTATUS status = SHSetValue(key->hKey, key->lpszSubKey, key->lpszValue, key->dwType, data, (DWORD)dataSize);
 		if (status != NOERROR) {
 			res = HRESULT_FROM_WIN32(status);
 		}
