@@ -24,8 +24,8 @@
 
 unsigned long dllRefCount = 0;
 
-const CLSID CLSID_LeptonThumbnailProvider = { 0xd0385023, 0xd398, 0x4b09, {0x89, 0xa2, 0xaa, 0x1a, 0xde, 0x3c, 0xdf, 0xe7} };
-const CLSID CLSID_LeptonPropertyHandler = { 0xb1e75cb3, 0xad2a, 0x40ed, {0xa8, 0x36, 0xf0, 0x6f, 0x3f, 0x32, 0xa8, 0xb9} };
+const CLSID CLSID_LeptonThumbnailProvider = {0xd0385023, 0xd398, 0x4b09, {0x89, 0xa2, 0xaa, 0x1a, 0xde, 0x3c, 0xdf, 0xe7}};
+const CLSID CLSID_LeptonPropertyHandler = {0xb1e75cb3, 0xad2a, 0x40ed, {0xa8, 0x36, 0xf0, 0x6f, 0x3f, 0x32, 0xa8, 0xb9}};
 
 // hInstance = "handle to an instance"
 // The operating system uses this value to identify the executable when it is loaded in memory.
@@ -45,21 +45,21 @@ typedef struct REGKEY_SUBKEY_AND_VALUE {
 	DWORD_PTR dwData;
 } REGKEY_SUBKEY_AND_VALUE;
 
-HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE*, ULONG);
-HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE*);
+HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE *, ULONG);
+HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE *);
 
-HRESULT deleteRegistryKeys(REGKEY_DELETEKEY*, ULONG);
+HRESULT deleteRegistryKeys(REGKEY_DELETEKEY *, ULONG);
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
 	switch (ul_reason_for_call) {
-	case DLL_PROCESS_ATTACH:
-		hInstance = hModule;
-		DisableThreadLibraryCalls(hModule);
-		break;
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-	case DLL_PROCESS_DETACH:
-		break;
+		case DLL_PROCESS_ATTACH:
+			hInstance = hModule;
+			DisableThreadLibraryCalls(hModule);
+			break;
+		case DLL_THREAD_ATTACH:
+		case DLL_THREAD_DETACH:
+		case DLL_PROCESS_DETACH:
+			break;
 	}
 
 	return TRUE;
@@ -67,7 +67,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReser
 
 STDAPI DllRegisterServer() {
 	HRESULT result;
-	WCHAR szModule[MAX_PATH] = { 0 };
+	WCHAR szModule[MAX_PATH] = {0};
 
 	if (GetModuleFileName(hInstance, szModule, ARRAYSIZE(szModule) == 0)) {
 		return HRESULT_FROM_WIN32(GetLastError());
@@ -119,7 +119,7 @@ STDAPI DllRegisterServer() {
 }
 
 STDAPI DllUnregisterServer() {
-	WCHAR szModule[MAX_PATH] = { 0 };
+	WCHAR szModule[MAX_PATH] = {0};
 
 	if (GetModuleFileName(hInstance, szModule, ARRAYSIZE(szModule)) == 0) {
 		return HRESULT_FROM_WIN32(GetLastError());
@@ -147,11 +147,11 @@ STDAPI DllCanUnloadNow() {
 	return dllRefCount > 0 ? S_FALSE : S_OK;
 }
 
-STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppv) {
 	return S_OK;
 }
 
-HRESULT deleteRegistryKeys(REGKEY_DELETEKEY* keys, ULONG size) {
+HRESULT deleteRegistryKeys(REGKEY_DELETEKEY *keys, ULONG size) {
 	HRESULT res = S_OK;
 	LSTATUS status;
 
@@ -165,7 +165,7 @@ HRESULT deleteRegistryKeys(REGKEY_DELETEKEY* keys, ULONG size) {
 	return res;
 }
 
-HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE* keys, ULONG size) {
+HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE *keys, ULONG size) {
 	HRESULT res = S_OK;
 	for (ULONG i = 0; i < size; i++) {
 		HRESULT tmp = createRegistryKey(&keys[i]);
@@ -177,30 +177,30 @@ HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE* keys, ULONG size) {
 	return res;
 }
 
-HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE* key) {
+HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE *key) {
 	HRESULT res = S_OK;
 
 	size_t dataSize;
 	LPVOID data = nullptr;
 
 	switch (key->dwType) {
-	case REG_DWORD:
-		data = (LPVOID)(LPDWORD)&key->dwData;
-		dataSize = sizeof(DWORD);
-		break;
+		case REG_DWORD:
+			data = (LPVOID)(LPDWORD)&key->dwData;
+			dataSize = sizeof(DWORD);
+			break;
 
-	case REG_SZ:
-	case REG_EXPAND_SZ:
-		// Safe replacement for strlen
-		res = StringCbLength((LPCWSTR)key->dwData, STRSAFE_MAX_CCH, &dataSize);
-		if (SUCCEEDED(res)) {
-			data = (LPVOID)(LPCWSTR)key->dwData;
-			dataSize += sizeof(WCHAR);
-		}
-		break;
+		case REG_SZ:
+		case REG_EXPAND_SZ:
+			// Safe replacement for strlen
+			res = StringCbLength((LPCWSTR)key->dwData, STRSAFE_MAX_CCH, &dataSize);
+			if (SUCCEEDED(res)) {
+				data = (LPVOID)(LPCWSTR)key->dwData;
+				dataSize += sizeof(WCHAR);
+			}
+			break;
 
-	default:
-		res = E_INVALIDARG;
+		default:
+			res = E_INVALIDARG;
 	}
 
 	if (SUCCEEDED(res)) {

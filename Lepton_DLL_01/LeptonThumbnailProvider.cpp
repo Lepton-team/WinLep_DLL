@@ -10,31 +10,25 @@
 
 #include <windows.h>
 
-//#include <gdiplus.h>
-//#include <Shlwapi.h>
-
 #include "dllmain.h"
 
-LeptonThumbnailProvider::LeptonThumbnailProvider() : m_refCount(1), pStream(nullptr) {
-	this->m_refCount = m_refCount;
-	this->pStream = pStream;
-
+LeptonThumbnailProvider::LeptonThumbnailProvider() : m_refCount(1), m_pStream(nullptr) {
 	lepton::IncDllRef();
 }
 
 LeptonThumbnailProvider::~LeptonThumbnailProvider() {
-	if (this->pStream) {
-		this->pStream->Release();
+	if (m_pStream) {
+		m_pStream->Release();
 	}
 
 	lepton::DecDllRef();
 }
 
-IFACEMETHODIMP LeptonThumbnailProvider::QueryInterface(REFIID riid, void** ppv) {
-	static const QITAB qit[] = { QITABENT(LeptonThumbnailProvider, IThumbnailProvider),
+IFACEMETHODIMP LeptonThumbnailProvider::QueryInterface(REFIID riid, void **ppv) {
+	static const QITAB qit[] = {QITABENT(LeptonThumbnailProvider, IThumbnailProvider),
 								 QITABENT(LeptonThumbnailProvider, IInitializeWithStream),
 		//The last structure in the array must have its piid member set to NULL and its dwOffset member set to 0.
-		{nullptr},
+								 {nullptr},
 #pragma warning(push)
 #pragma warning(disable: 4838)
 	};
@@ -43,41 +37,41 @@ IFACEMETHODIMP LeptonThumbnailProvider::QueryInterface(REFIID riid, void** ppv) 
 }
 
 IFACEMETHODIMP_(ULONG) LeptonThumbnailProvider::AddRef() {
-	return InterlockedIncrement(&(this->m_refCount));
+	return InterlockedIncrement(&(m_refCount));
 }
 
 IFACEMETHODIMP_(ULONG) LeptonThumbnailProvider::Release() {
-	unsigned long m_refCount = InterlockedDecrement(&(this->m_refCount));
-	if (m_refCount == 0) {
-		if (this->pStream) {
-			this->pStream->Release();
+	unsigned long refCount = InterlockedDecrement(&m_refCount);
+	if (refCount == 0) {
+		if (m_pStream) {
+			m_pStream->Release();
 		}
 
 		delete this;
 	}
 
-	return m_refCount;
+	return refCount;
 }
 
-IFACEMETHODIMP LeptonThumbnailProvider::Initialize(IStream* pStream, DWORD gfxMode) {
-	if (this->pStream) {
+IFACEMETHODIMP LeptonThumbnailProvider::Initialize(IStream *pStream, DWORD gfxMode) {
+	if (m_pStream) {
 		return HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
 	}
 
-	HRESULT result = pStream->QueryInterface(&(this->pStream));
+	HRESULT result = m_pStream->QueryInterface(&m_pStream);
 
 	if (FAILED(result)) {
 		return result;
 	}
 
-	//if (this->pStream == nullptr) {
-	//	result = pStream->QueryInterface(&(this->pStream));
+	//if (m_pStream == nullptr) {
+	//	result = m_pStream->QueryInterface(&(m_pStream));
 	//}
 
 	return result;
 }
 
-IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_ALPHATYPE* pwdAlpha) {
+IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WTS_ALPHATYPE *pwdAlpha) {
 	if (!phbmp || !pwdAlpha) {
 		return E_INVALIDARG;
 	}
@@ -90,7 +84,7 @@ IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP* phbmp, WT
 
 	// TODO
 	if (SUCCEEDED(res)) {
-		IStream* pImageStream = nullptr;
+		IStream *pImageStream = nullptr;
 		res = S_OK; // _GetStreamFromString(pszBase64EncodedImageString, &pImageStream); // FIXME
 
 		// TODO

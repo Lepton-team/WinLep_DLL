@@ -20,8 +20,8 @@ LeptonPropertyHandler::~LeptonPropertyHandler() {
 	DecDllRef();
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::QueryInterface(REFIID riid, void** ppv) {
-	static const QITAB qit[] = { QITABENT(LeptonPropertyHandler, IPropertyStore),
+IFACEMETHODIMP LeptonPropertyHandler::QueryInterface(REFIID riid, void **ppv) {
+	static const QITAB qit[] = {QITABENT(LeptonPropertyHandler, IPropertyStore),
 								 QITABENT(LeptonPropertyHandler, IInitializeWithStream),
 		//The last structure in the array must have its piid member set to NULL and its dwOffset member set to 0.
 		{nullptr},
@@ -52,7 +52,7 @@ IFACEMETHODIMP_(ULONG) LeptonPropertyHandler::Release() {
 	return refCount;
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::Initialize(IStream* pStream, DWORD grfMode) {
+IFACEMETHODIMP LeptonPropertyHandler::Initialize(IStream *pStream, DWORD grfMode) {
 	if (m_pStream) {
 		return HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
 	}
@@ -79,7 +79,7 @@ IFACEMETHODIMP LeptonPropertyHandler::Initialize(IStream* pStream, DWORD grfMode
 	return S_OK;
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetCount(DWORD* pcProps) {
+IFACEMETHODIMP LeptonPropertyHandler::GetCount(DWORD *pcProps) {
 	if (!pcProps) {
 		return E_INVALIDARG;
 	}
@@ -93,7 +93,7 @@ IFACEMETHODIMP LeptonPropertyHandler::GetCount(DWORD* pcProps) {
 	return m_pStoreCache->GetCount(pcProps);
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY* pkey) {
+IFACEMETHODIMP LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY *pkey) {
 	if (!pkey) {
 		return E_INVALIDARG;
 	}
@@ -107,7 +107,7 @@ IFACEMETHODIMP LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY* pkey) {
 	return m_pStoreCache->GetAt(iProp, pkey);
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetValue(REFPROPERTYKEY key, PROPVARIANT* pPropVar) {
+IFACEMETHODIMP LeptonPropertyHandler::GetValue(REFPROPERTYKEY key, PROPVARIANT *pPropVar) {
 	if (!pPropVar) {
 		return E_INVALIDARG;
 	}

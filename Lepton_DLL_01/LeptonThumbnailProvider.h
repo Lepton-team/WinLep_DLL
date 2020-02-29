@@ -16,7 +16,7 @@ public:
 	// https://docs.microsoft.com/en-us/windows/win32/api/unknwn/nn-unknwn-iunknown
 
 		// Retrieves pointers to the supported interfaces on an object.
-	IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) override;
+	IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv) override;
 
 	// Increments the reference count for an interface pointer to a COM object.
 	// You should call this method whenever you make a copy of an interface pointer.
@@ -34,7 +34,7 @@ public:
 	@param gfxMode - One of the STGM constants: https://docs.microsoft.com/en-us/windows/win32/stg/stgm-constants
 				   - Indicates the access mode for pStream.
 	***/
-	IFACEMETHODIMP Initialize(IStream* pStream, DWORD gfxMode) override;
+	IFACEMETHODIMP Initialize(IStream *pStream, DWORD gfxMode) override;
 
 	/***
 	@param cx - The maximum thumbnail size, in pixels.
@@ -44,11 +44,11 @@ public:
 	@return HRESULT
 	If this method succeeds, it returns S_OK. Otherwise, it returns an HRESULT error code.
 	***/
-	IFACEMETHODIMP GetThumbnail(UINT cx, HBITMAP* phbmp, WTS_ALPHATYPE* pwdAlpha) override;
+	IFACEMETHODIMP GetThumbnail(UINT cx, HBITMAP *phbmp, WTS_ALPHATYPE *pwdAlpha) override;
 
 private:
 	long m_refCount;
 	// This interface supports reading and writing data to stream objects.
 	// https://docs.microsoft.com/en-us/previous-versions/ms934887(v%3Dmsdn.10)
-	IStream* pStream;
+	IStream *m_pStream;
 };
