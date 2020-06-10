@@ -104,10 +104,13 @@ IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WT
 
 	// Set the HBITMAP
 	if (pBitmap->GetHBITMAP(Gdiplus::Color::Transparent, phbmp) != Gdiplus::Status::Ok) {
+		delete pBitmap;
 		pImageStream->Release();
+
 		return E_FAIL;
 	}
 
+	delete pBitmap;
 	pImageStream->Release();
 	return S_OK;
 }
