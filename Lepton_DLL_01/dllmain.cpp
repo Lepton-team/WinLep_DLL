@@ -12,204 +12,196 @@
 #include "dllmain.h"
 
 // Generated UUID: d0385023-d398-4b09-89a2-aa1ade3cdfe7
-#define szCLSID_LEPTON_THUMBNAIL_HANDLER L"{d0385023-d398-4b09-89a2-aa1ade3cdfe7}"
-#define szLEPTON_THUMBNAIL_HANDLER L"Lepton Thumbnail Handler"
-#define szTHUMBNAIL_IMAGE_HANDLER_SUBKEY L"{E357FCCD-A995-4576-B01F-234630154E96}"
+#define SZ_CLSID_WINLEP_THUMBNAIL_HANDLER L"{d0385023-d398-4b09-89a2-aa1ade3cdfe7}"
+#define SZ_WINLEP_THUMBNAIL_HANDLER L"WinLep Thumbnail Handler"
+#define SZ_THUMBNAIL_IMAGE_HANDLER_SUBKEY L"{E357FCCD-A995-4576-B01F-234630154E96}"
 
-#define szCLSID_LEPTON_PROPERTY_HANDLER L"{b1e75cb3-ad2a-40ed-a836-f06f3f32a8b9}"
-#define szLEPTON_PROPERTY_HANDLER L"Lepton Property Handler"
+//#define SZ_CLSID_LEPTON_PROPERTY_HANDLER L"{b1e75cb3-ad2a-40ed-a836-f06f3f32a8b9}"
+//#define SZ_LEPTON_PROPERTY_HANDLER L"Lepton Property Handler"
 
-//TODO: file extsion name ... For now it's .lep // FIXME
-#define szFILE_EXTENSION L".wlep"
+//TODO: Change file extsion name ?
+#define SZ_FILE_EXTENSION L".wlep"
 
 unsigned long dllRefCount = 0;
 
 const CLSID CLSID_LeptonThumbnailProvider = {0xd0385023, 0xd398, 0x4b09, {0x89, 0xa2, 0xaa, 0x1a, 0xde, 0x3c, 0xdf, 0xe7}};
-const CLSID CLSID_LeptonPropertyHandler = {0xb1e75cb3, 0xad2a, 0x40ed, {0xa8, 0x36, 0xf0, 0x6f, 0x3f, 0x32, 0xa8, 0xb9}};
+//const CLSID CLSID_LeptonPropertyHandler = {0xb1e75cb3, 0xad2a, 0x40ed, {0xa8, 0x36, 0xf0, 0x6f, 0x3f, 0x32, 0xa8, 0xb9}};
 
 // hInstance = "handle to an instance"
 // The operating system uses this value to identify the executable when it is loaded in memory.
 // The instance handle is needed to load icons or bitmaps.
-HINSTANCE hInstance = nullptr;
+HINSTANCE g_hInstance = nullptr;
 
-typedef struct REGKEY_DELETEKEY {
-	HKEY hKey;
-	LPCWSTR lpszSubKey;
-} REGKEY_DELETEKEY;
-
-typedef struct REGKEY_SUBKEY_AND_VALUE {
-	HKEY hKey;
-	LPCWSTR lpszSubKey;
-	LPCWSTR lpszValue;
-	DWORD dwType;
-	DWORD_PTR dwData;
-} REGKEY_SUBKEY_AND_VALUE;
-
-HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE *, ULONG);
-HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE *);
-
-HRESULT deleteRegistryKeys(REGKEY_DELETEKEY *, ULONG);
+struct REGISTRY_ENTRY {
+	HKEY hkeyRoot;
+	PCWSTR pszKeyName;
+	PCWSTR pszValueName;
+	PCWSTR pszData;
+};
 
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-	switch (ul_reason_for_call) {
-		case DLL_PROCESS_ATTACH:
-			hInstance = hModule;
-			DisableThreadLibraryCalls(hModule);
-			break;
-		case DLL_THREAD_ATTACH:
-		case DLL_THREAD_DETACH:
-		case DLL_PROCESS_DETACH:
-			break;
+	if (ul_reason_for_call == DLL_PROCESS_ATTACH) {
+		g_hInstance = hModule;
+		DisableThreadLibraryCalls(hModule);
 	}
 
 	return TRUE;
 }
 
+typedef HRESULT(*PFNCREATEINSTANCE)(REFIID riid, void **ppvObject);
+
+extern HRESULT WinLepThumbnailProvider_CreateInstance(REFIID riid, void **ppv);
+
+struct CLASS_OBJECT_INIT {
+	const CLSID *pClsid;
+	PFNCREATEINSTANCE pfnCreate;
+};
+
+const CLASS_OBJECT_INIT c_rgClassObjectInit[] = {
+	{ &CLSID_LeptonThumbnailProvider, WinLepThumbnailProvider_CreateInstance }
+};
+
+class CClassFactory : public IClassFactory {
+public:
+	static HRESULT CreateInstance(REFCLSID clsid, const CLASS_OBJECT_INIT *pClassObjectInits, size_t cClassObjectInits, REFIID riid, void **ppv) {
+		*ppv = NULL;
+		HRESULT hr = CLASS_E_CLASSNOTAVAILABLE;
+		for (size_t i = 0; i < cClassObjectInits; i++) {
+			if (clsid == *pClassObjectInits[i].pClsid) {
+				IClassFactory *pClassFactory = new (std::nothrow) CClassFactory(pClassObjectInits[i].pfnCreate);
+				hr = pClassFactory ? S_OK : E_OUTOFMEMORY;
+				if (SUCCEEDED(hr)) {
+					hr = pClassFactory->QueryInterface(riid, ppv);
+					pClassFactory->Release();
+				}
+				break; // match found
+			}
+		}
+		return hr;
+	}
+
+	CClassFactory(PFNCREATEINSTANCE pfnCreate) : _cRef(1), _pfnCreate(pfnCreate) {
+		wlep::IncDllRef();
+	}
+
+	// IUnknown
+	IFACEMETHODIMP QueryInterface(REFIID riid, void **ppv) {
+		static const QITAB qit[] = {
+			QITABENT(CClassFactory, IClassFactory),
+			{0}
+		};
+		return QISearch(this, qit, riid, ppv);
+	}
+
+	IFACEMETHODIMP_(ULONG) AddRef() {
+		return InterlockedIncrement(&_cRef);
+	}
+
+	IFACEMETHODIMP_(ULONG) Release() {
+		long cRef = InterlockedDecrement(&_cRef);
+		if (cRef == 0) {
+			delete this;
+		}
+		return cRef;
+	}
+
+	// IClassFactory
+	IFACEMETHODIMP CreateInstance(IUnknown *punkOuter, REFIID riid, void **ppv) {
+		return punkOuter ? CLASS_E_NOAGGREGATION : _pfnCreate(riid, ppv);
+	}
+
+	IFACEMETHODIMP LockServer(BOOL fLock) {
+		if (fLock) {
+			wlep::IncDllRef();
+		} else {
+			wlep::DecDllRef();
+		}
+		return S_OK;
+	}
+
+private:
+	~CClassFactory() {
+		wlep::DecDllRef();
+	}
+
+	long _cRef;
+	PFNCREATEINSTANCE _pfnCreate;
+};
+
+
+// Creates a registry key (if needed) and sets the default value of the key
+HRESULT CreateRegKeyAndSetValue(const REGISTRY_ENTRY *pRegistryEntry) {
+	HKEY hKey;
+	HRESULT hr = HRESULT_FROM_WIN32(RegCreateKeyExW(pRegistryEntry->hkeyRoot, pRegistryEntry->pszKeyName,
+													0, NULL, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, NULL, &hKey, NULL));
+
+	if (SUCCEEDED(hr)) {
+		hr = HRESULT_FROM_WIN32(RegSetValueExW(hKey, pRegistryEntry->pszValueName, 0, REG_SZ, (LPBYTE)pRegistryEntry->pszData,
+			((DWORD)wcslen(pRegistryEntry->pszData) + 1) * sizeof(WCHAR)));
+
+		RegCloseKey(hKey);
+	}
+
+	return hr;
+}
+
+// Registers this COM server
 STDAPI DllRegisterServer() {
-	HRESULT result;
-	WCHAR szModule[MAX_PATH] = {0};
+	HRESULT hr;
+	WCHAR szModuleName[MAX_PATH];
 
-	if (GetModuleFileName(hInstance, szModule, ARRAYSIZE(szModule) == 0)) {
+	if (!GetModuleFileNameW(g_hInstance, szModuleName, ARRAYSIZE(szModuleName))) {
 		return HRESULT_FROM_WIN32(GetLastError());
-	}
-
-	//Register lepton thumbnail provider
-	//TODO: file extsion name ... For now it's .lep // FIXME
-	REGKEY_SUBKEY_AND_VALUE thumbnailProviderKeys[] = {
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER, nullptr, REG_SZ, (DWORD_PTR)szLEPTON_THUMBNAIL_HANDLER},
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER L"\\InprocServer32", L"ThreadingModel", REG_SZ, (DWORD_PTR)L"Apartment"},
-		{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY, nullptr, REG_SZ, (DWORD_PTR)szCLSID_LEPTON_THUMBNAIL_HANDLER}
-	};
-
-	result = createRegistryKeys(thumbnailProviderKeys, ARRAYSIZE(thumbnailProviderKeys));
-
-	if (FAILED(result)) {
-		REGKEY_DELETEKEY keysToDelete[] = {
-			{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY},
-			{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER}
+	} else {
+		const REGISTRY_ENTRY rgRegistryEntries[] = {
+			// RootKey			KeyName														   ValueName					Data
+			{HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_WINLEP_THUMBNAIL_HANDLER, NULL, SZ_WINLEP_THUMBNAIL_HANDLER},
+			{HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_WINLEP_THUMBNAIL_HANDLER L"\\InProcServer32", NULL, szModuleName},
+			{HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" SZ_CLSID_WINLEP_THUMBNAIL_HANDLER L"\\InProcServer32", L"ThreadingModel", L"Apartment"},
+			{HKEY_CURRENT_USER, L"Software\\Classes\\" SZ_FILE_EXTENSION "\\ShellEx\\" SZ_THUMBNAIL_IMAGE_HANDLER_SUBKEY, NULL, SZ_CLSID_WINLEP_THUMBNAIL_HANDLER},
 		};
+		hr = S_OK;
 
-		deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
-		return result;
+		for (int i = 0; i < ARRAYSIZE(rgRegistryEntries) && SUCCEEDED(hr); i++) {
+			hr = CreateRegKeyAndSetValue(&rgRegistryEntries[i]);
+		}
+	}
+	if (SUCCEEDED(hr)) {
+		// This tells the shell to invalidate the thumbnail cache. This is important because any .wlep files
+		// viewed before registering this handler would otherwise show cached blank thumbnails.
+		SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
 	}
 
-	REGKEY_SUBKEY_AND_VALUE propertyProviderKeys[] = {
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER, nullptr, REG_SZ, (DWORD_PTR)szLEPTON_PROPERTY_HANDLER},
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER L"\\InprocServer32", L"ThreadingModel", REG_SZ, (DWORD_PTR)L"Apartment"},
-		{HKEY_CLASSES_ROOT, szFILE_EXTENSION, L"PerceivedType", REG_SZ, (DWORD_PTR)L"Image"},
-		{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION, nullptr, REG_SZ, (DWORD_PTR)szCLSID_LEPTON_PROPERTY_HANDLER},
-	};
-
-	result = createRegistryKeys(propertyProviderKeys, ARRAYSIZE(propertyProviderKeys));
-
-	if (FAILED(result)) {
-		REGKEY_DELETEKEY keysToDelete[] = {
-			{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION},
-			{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER},
-		};
-
-		deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
-		return result;
-	}
-
-	// Notify shell about association changes
-	SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
-
-	return S_OK;
+	return hr;
 }
 
+// Unregisters this COM server
 STDAPI DllUnregisterServer() {
-	WCHAR szModule[MAX_PATH] = {0};
+	HRESULT hr = S_OK;
+	
+	const PCWSTR rgpszKeys[] = {
+		L"Software\\Classes\\CLSID\\" SZ_CLSID_WINLEP_THUMBNAIL_HANDLER,
+		L"Software\\Classes\\" SZ_FILE_EXTENSION "\\ShellEx\\" SZ_THUMBNAIL_IMAGE_HANDLER_SUBKEY
+	};
 
-	if (GetModuleFileName(hInstance, szModule, ARRAYSIZE(szModule)) == 0) {
-		return HRESULT_FROM_WIN32(GetLastError());
+	// Delete the registry entries
+	for (int i = 0; i < ARRAYSIZE(rgpszKeys) && SUCCEEDED(hr); i++) {
+		hr = HRESULT_FROM_WIN32(RegDeleteTreeW(HKEY_CURRENT_USER, rgpszKeys[i]));
+		if (hr == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+			// If the registry entry has already been deleted, it's S_OK.
+			hr = S_OK;
+		}
 	}
 
-	REGKEY_DELETEKEY keysToDelete[] = {
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_THUMBNAIL_HANDLER},
-		{HKEY_CLASSES_ROOT, L"CLSID\\" szCLSID_LEPTON_PROPERTY_HANDLER},
-	};
-
-	HRESULT result = deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
-
-	REGKEY_DELETEKEY keysToDelete2[] = {
-		{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY},
-		{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION},
-	};
-
-	deleteRegistryKeys(keysToDelete2, ARRAYSIZE(keysToDelete2));
-
-	return result;
+	return hr;
 }
-
+// Only allow the DLL to be unloaded after all outstanding references have been released
 STDAPI DllCanUnloadNow() {
 	return dllRefCount > 0 ? S_FALSE : S_OK;
 }
 
-STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void **ppv) {
-	return S_OK;
-}
-
-HRESULT deleteRegistryKeys(REGKEY_DELETEKEY *keys, ULONG size) {
-	HRESULT res = S_OK;
-	LSTATUS status;
-
-	for (ULONG i = 0; i < size; i++) {
-		status = RegDeleteTree(keys[i].hKey, keys[i].lpszSubKey);
-		if (status != NOERROR) {
-			res = HRESULT_FROM_WIN32(status);
-		}
-	}
-
-	return res;
-}
-
-HRESULT createRegistryKeys(REGKEY_SUBKEY_AND_VALUE *keys, ULONG size) {
-	HRESULT res = S_OK;
-	for (ULONG i = 0; i < size; i++) {
-		HRESULT tmp = createRegistryKey(&keys[i]);
-		if (FAILED(tmp)) {
-			res = tmp;
-		}
-	}
-
-	return res;
-}
-
-HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE *key) {
-	HRESULT res = S_OK;
-
-	size_t dataSize;
-	LPVOID data = nullptr;
-
-	switch (key->dwType) {
-		case REG_DWORD:
-			data = (LPVOID)(LPDWORD)&key->dwData;
-			dataSize = sizeof(DWORD);
-			break;
-
-		case REG_SZ:
-		case REG_EXPAND_SZ:
-			// Safe replacement for strlen
-			res = StringCbLength((LPCWSTR)key->dwData, STRSAFE_MAX_CCH, &dataSize);
-			if (SUCCEEDED(res)) {
-				data = (LPVOID)(LPCWSTR)key->dwData;
-				dataSize += sizeof(WCHAR);
-			}
-			break;
-
-		default:
-			res = E_INVALIDARG;
-	}
-
-	if (SUCCEEDED(res)) {
-		LSTATUS status = SHSetValue(key->hKey, key->lpszSubKey, key->lpszValue, key->dwType, data, (DWORD)dataSize);
-		if (status != NOERROR) {
-			res = HRESULT_FROM_WIN32(status);
-		}
-	}
-
-	return res;
+STDAPI DllGetClassObject(REFCLSID clsid, REFIID riid, void **ppv) {
+	return CClassFactory::CreateInstance(clsid, c_rgClassObjectInit, ARRAYSIZE(c_rgClassObjectInit), riid, ppv);
 }
 
 void wlep::IncDllRef() {

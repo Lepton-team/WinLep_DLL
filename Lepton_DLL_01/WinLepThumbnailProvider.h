@@ -10,10 +10,10 @@
 // Initializing The object that implements IThumbnailProvider interface must also implement IInitializeWithStream.
 // The Shell calls IInitializeWithStream::Initialize with the stream of the item
 // and IInitializeWithStream is the only initialization interface used when IThumbnailProvider instances are loaded out-of-proc (for isolation purposes).
-class LeptonThumbnailProvider : public IInitializeWithStream, public IThumbnailProvider {
+class WinLepThumbnailProvider : public IInitializeWithStream, public IThumbnailProvider {
 public:
-	LeptonThumbnailProvider();
-	~LeptonThumbnailProvider();
+	WinLepThumbnailProvider();
+	~WinLepThumbnailProvider();
 
 	// IUnknown
 	// https://docs.microsoft.com/en-us/windows/win32/api/unknwn/nn-unknwn-iunknown

@@ -1,5 +1,5 @@
 #include "pch.h"
-#include "LeptonThumbnailProvider.h"
+#include "WinLepThumbnailProvider.h"
 
 #include <shlwapi.h>
 
@@ -11,10 +11,9 @@
 #include <sstream>
 #include <string>
 
-
 #include "dllmain.h"
 
-LeptonThumbnailProvider::LeptonThumbnailProvider() : m_refCount(1), m_pStream(nullptr) {
+WinLepThumbnailProvider::WinLepThumbnailProvider() : m_refCount(1), m_pStream(nullptr) {
 	wlep::IncDllRef();
 	// Initialized in ValidateAndReadHeader
 	m_pThumbnailData = nullptr;
@@ -24,7 +23,7 @@ LeptonThumbnailProvider::LeptonThumbnailProvider() : m_refCount(1), m_pStream(nu
 	GdiplusStartup(&m_pGdiplusToken, &m_GdiplusStartupInput, NULL);
 }
 
-LeptonThumbnailProvider::~LeptonThumbnailProvider() {
+WinLepThumbnailProvider::~WinLepThumbnailProvider() {
 	if (m_pStream) {
 		m_pStream->Release();
 	}
@@ -42,9 +41,9 @@ LeptonThumbnailProvider::~LeptonThumbnailProvider() {
 	wlep::DecDllRef();
 }
 
-IFACEMETHODIMP LeptonThumbnailProvider::QueryInterface(REFIID riid, void **ppv) {
-	static const QITAB qit[] = {QITABENT(LeptonThumbnailProvider, IThumbnailProvider),
-								 QITABENT(LeptonThumbnailProvider, IInitializeWithStream),
+IFACEMETHODIMP WinLepThumbnailProvider::QueryInterface(REFIID riid, void **ppv) {
+	static const QITAB qit[] = {QITABENT(WinLepThumbnailProvider, IThumbnailProvider),
+								 QITABENT(WinLepThumbnailProvider, IInitializeWithStream),
 		//The last structure in the array must have its piid member set to NULL and its dwOffset member set to 0.
 								 {nullptr},
 #pragma warning(push)
@@ -54,11 +53,11 @@ IFACEMETHODIMP LeptonThumbnailProvider::QueryInterface(REFIID riid, void **ppv) 
 	return QISearch(this, qit, riid, ppv);
 }
 
-IFACEMETHODIMP_(ULONG) LeptonThumbnailProvider::AddRef() {
+IFACEMETHODIMP_(ULONG) WinLepThumbnailProvider::AddRef() {
 	return InterlockedIncrement(&(m_refCount));
 }
 
-IFACEMETHODIMP_(ULONG) LeptonThumbnailProvider::Release() {
+IFACEMETHODIMP_(ULONG) WinLepThumbnailProvider::Release() {
 	unsigned long refCount = InterlockedDecrement(&m_refCount);
 	if (refCount == 0) {
 		if (m_pStream) {
@@ -71,7 +70,7 @@ IFACEMETHODIMP_(ULONG) LeptonThumbnailProvider::Release() {
 	return refCount;
 }
 
-IFACEMETHODIMP LeptonThumbnailProvider::Initialize(IStream *pStream, DWORD gfxMode) {
+IFACEMETHODIMP WinLepThumbnailProvider::Initialize(IStream *pStream, DWORD gfxMode) {
 	if (m_pStream) {
 		return HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
 	}
@@ -82,7 +81,7 @@ IFACEMETHODIMP LeptonThumbnailProvider::Initialize(IStream *pStream, DWORD gfxMo
 }
 
 
-IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WTS_ALPHATYPE *pwdAlpha) {
+IFACEMETHODIMP WinLepThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WTS_ALPHATYPE *pwdAlpha) {
 	if (!phbmp || !pwdAlpha) {
 		return E_INVALIDARG;
 	}
@@ -95,10 +94,10 @@ IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WT
 
 	*phbmp = nullptr;
 	*pwdAlpha = WTS_ALPHATYPE::WTSAT_RGB;
-	
+
 	// Convert the jpg data to a stream
 	IStream *pImageStream = SHCreateMemStream(m_pThumbnailData, m_uThumbnailSize);
-	
+
 	// Convert the stream to a bitmap
 	Gdiplus::Bitmap *pBitmap = new Gdiplus::Bitmap(pImageStream);
 
@@ -115,7 +114,18 @@ IFACEMETHODIMP LeptonThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WT
 	return S_OK;
 }
 
-HRESULT LeptonThumbnailProvider::ValidateHeader() {
+HRESULT LeptonThumbnailProvider_CreateInstance(REFIID riid, void **ppv) {
+	WinLepThumbnailProvider *pNew = new (std::nothrow) WinLepThumbnailProvider();
+	HRESULT hr = pNew ? S_OK : E_OUTOFMEMORY;
+	if (SUCCEEDED(hr)) {
+		hr = pNew->QueryInterface(riid, ppv);
+		pNew->Release();
+	}
+
+	return hr;
+}
+
+HRESULT WinLepThumbnailProvider::ValidateHeader() {
 	// No need to keep this as a class member
 	// Since we're using it only once for validation
 	BYTE *pHeader = new BYTE[m_ulWinLepPrefixSize];
@@ -139,7 +149,7 @@ HRESULT LeptonThumbnailProvider::ValidateHeader() {
 	return S_OK;
 }
 
-HRESULT LeptonThumbnailProvider::ValidateAndReadHeader() {
+HRESULT WinLepThumbnailProvider::ValidateAndReadHeader() {
 	// The first 2 bytes are already read here.
 	HRESULT hr = ValidateHeader();
 	if (FAILED(hr)) {
