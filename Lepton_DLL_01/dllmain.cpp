@@ -20,7 +20,7 @@
 #define szLEPTON_PROPERTY_HANDLER L"Lepton Property Handler"
 
 //TODO: file extsion name ... For now it's .lep // FIXME
-#define szFILE_EXTENSION L".lep"
+#define szFILE_EXTENSION L".wlep"
 
 unsigned long dllRefCount = 0;
 
@@ -132,7 +132,6 @@ STDAPI DllUnregisterServer() {
 
 	HRESULT result = deleteRegistryKeys(keysToDelete, ARRAYSIZE(keysToDelete));
 
-	// TODO: Filename extension!
 	REGKEY_DELETEKEY keysToDelete2[] = {
 		{HKEY_CLASSES_ROOT, szFILE_EXTENSION L"\\shellex\\" szTHUMBNAIL_IMAGE_HANDLER_SUBKEY},
 		{HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PropertySystem\\PropertyHandlers\\" szFILE_EXTENSION},
@@ -213,12 +212,12 @@ HRESULT createRegistryKey(REGKEY_SUBKEY_AND_VALUE *key) {
 	return res;
 }
 
-void lepton::IncDllRef() {
+void wlep::IncDllRef() {
 	// Increments the value of the specified 32-bit variable as an atomic operation.
 	InterlockedIncrement(&dllRefCount);
 }
 
-void lepton::DecDllRef() {
+void wlep::DecDllRef() {
 	// Decrements the value of the specified 32-bit variable as an atomic operation.
 	InterlockedDecrement(&dllRefCount);
 }

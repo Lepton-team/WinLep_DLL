@@ -1,6 +1,6 @@
 #pragma once
 
-namespace lepton {
+namespace wlep {
 	void IncDllRef();
 	void DecDllRef();
 }

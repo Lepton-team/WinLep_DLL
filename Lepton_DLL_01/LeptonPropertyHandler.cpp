@@ -10,17 +10,16 @@
 #include <shlwapi.h>
 #include <strsafe.h>
 
-using namespace lepton;
 
-LeptonPropertyHandler::LeptonPropertyHandler() : m_refCount(1), m_pStream(nullptr), m_pStoreCache(nullptr) {
+wlep::LeptonPropertyHandler::LeptonPropertyHandler() : m_refCount(1), m_pStream(nullptr), m_pStoreCache(nullptr) {
 	IncDllRef();
 }
 
-LeptonPropertyHandler::~LeptonPropertyHandler() {
+wlep::LeptonPropertyHandler::~LeptonPropertyHandler() {
 	DecDllRef();
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::QueryInterface(REFIID riid, void **ppv) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::QueryInterface(REFIID riid, void **ppv) {
 	static const QITAB qit[] = {QITABENT(LeptonPropertyHandler, IPropertyStore),
 								 QITABENT(LeptonPropertyHandler, IInitializeWithStream),
 		//The last structure in the array must have its piid member set to NULL and its dwOffset member set to 0.
@@ -32,11 +31,11 @@ IFACEMETHODIMP LeptonPropertyHandler::QueryInterface(REFIID riid, void **ppv) {
 	return QISearch(this, qit, riid, ppv);
 }
 
-IFACEMETHODIMP_(ULONG) LeptonPropertyHandler::AddRef() {
+IFACEMETHODIMP_(ULONG) wlep::LeptonPropertyHandler::AddRef() {
 	return InterlockedIncrement(&m_refCount);
 }
 
-IFACEMETHODIMP_(ULONG) LeptonPropertyHandler::Release() {
+IFACEMETHODIMP_(ULONG) wlep::LeptonPropertyHandler::Release() {
 	unsigned long refCount = InterlockedDecrement(&m_refCount);
 	if (refCount == 0) {
 		if (m_pStream) {
@@ -52,7 +51,7 @@ IFACEMETHODIMP_(ULONG) LeptonPropertyHandler::Release() {
 	return refCount;
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::Initialize(IStream *pStream, DWORD grfMode) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::Initialize(IStream *pStream, DWORD grfMode) {
 	if (m_pStream) {
 		return HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
 	}
@@ -79,7 +78,7 @@ IFACEMETHODIMP LeptonPropertyHandler::Initialize(IStream *pStream, DWORD grfMode
 	return S_OK;
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetCount(DWORD *pcProps) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::GetCount(DWORD *pcProps) {
 	if (!pcProps) {
 		return E_INVALIDARG;
 	}
@@ -93,7 +92,7 @@ IFACEMETHODIMP LeptonPropertyHandler::GetCount(DWORD *pcProps) {
 	return m_pStoreCache->GetCount(pcProps);
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY *pkey) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY *pkey) {
 	if (!pkey) {
 		return E_INVALIDARG;
 	}
@@ -107,7 +106,7 @@ IFACEMETHODIMP LeptonPropertyHandler::GetAt(DWORD iProp, PROPERTYKEY *pkey) {
 	return m_pStoreCache->GetAt(iProp, pkey);
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::GetValue(REFPROPERTYKEY key, PROPVARIANT *pPropVar) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::GetValue(REFPROPERTYKEY key, PROPVARIANT *pPropVar) {
 	if (!pPropVar) {
 		return E_INVALIDARG;
 	}
@@ -121,21 +120,21 @@ IFACEMETHODIMP LeptonPropertyHandler::GetValue(REFPROPERTYKEY key, PROPVARIANT *
 	return m_pStoreCache->GetValue(key, pPropVar);
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::SetValue(REFPROPERTYKEY key, REFPROPVARIANT propVar) {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::SetValue(REFPROPERTYKEY key, REFPROPVARIANT propVar) {
 	// All properties are read-only.
 	// According to MSDN, STG_E_INVALIDARG should be returned,
 	// but that doesn't exist, so this is close enough.
 	return STG_E_ACCESSDENIED;//STG_E_INVALIDPARAMETER;
 }
 
-IFACEMETHODIMP LeptonPropertyHandler::Commit() {
+IFACEMETHODIMP wlep::LeptonPropertyHandler::Commit() {
 	// All properties are read-only.
 	// According to MSDN, STG_E_INVALIDARG should be returned,
 	// but that doesn't exist, so this is close enough.
 	return STG_E_ACCESSDENIED;//STG_E_INVALIDPARAMETER;
 }
 
-HRESULT LeptonPropertyHandler::loadProperties() {
+HRESULT wlep::LeptonPropertyHandler::loadProperties() {
 	// TODO: Implement
 
 	return E_NOTIMPL;
