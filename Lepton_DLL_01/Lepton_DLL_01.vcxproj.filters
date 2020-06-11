@@ -24,10 +24,10 @@
     <ClInclude Include="dllmain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LeptonThumbnailProvider.h">
+    <ClInclude Include="LeptonPropertyHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LeptonPropertyHandler.h">
+    <ClInclude Include="WinLepThumbnailProvider.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,10 +38,10 @@
     <ClCompile Include="pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LeptonThumbnailProvider.cpp">
+    <ClCompile Include="LeptonPropertyHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LeptonPropertyHandler.cpp">
+    <ClCompile Include="WinLepThumbnailProvider.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

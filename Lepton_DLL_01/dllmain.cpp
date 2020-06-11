@@ -128,7 +128,6 @@ private:
 	PFNCREATEINSTANCE _pfnCreate;
 };
 
-
 // Creates a registry key (if needed) and sets the default value of the key
 HRESULT CreateRegKeyAndSetValue(const REGISTRY_ENTRY *pRegistryEntry) {
 	HKEY hKey;

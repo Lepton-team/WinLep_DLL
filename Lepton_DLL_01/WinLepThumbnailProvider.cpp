@@ -19,8 +19,6 @@ WinLepThumbnailProvider::WinLepThumbnailProvider() : m_refCount(1), m_pStream(nu
 	m_pThumbnailData = nullptr;
 	m_pVersion = nullptr;
 	m_uThumbnailSize = 0;
-
-	GdiplusStartup(&m_pGdiplusToken, &m_GdiplusStartupInput, NULL);
 }
 
 WinLepThumbnailProvider::~WinLepThumbnailProvider() {
@@ -36,7 +34,7 @@ WinLepThumbnailProvider::~WinLepThumbnailProvider() {
 		delete[] m_pVersion;
 	}
 
-	Gdiplus::GdiplusShutdown(m_pGdiplusToken);
+	//Gdiplus::GdiplusShutdown(m_pGdiplusToken);
 
 	wlep::DecDllRef();
 }
@@ -45,7 +43,7 @@ IFACEMETHODIMP WinLepThumbnailProvider::QueryInterface(REFIID riid, void **ppv) 
 	static const QITAB qit[] = {QITABENT(WinLepThumbnailProvider, IThumbnailProvider),
 								 QITABENT(WinLepThumbnailProvider, IInitializeWithStream),
 		//The last structure in the array must have its piid member set to NULL and its dwOffset member set to 0.
-								 {nullptr},
+								 {0},
 #pragma warning(push)
 #pragma warning(disable: 4838)
 	};
@@ -59,10 +57,7 @@ IFACEMETHODIMP_(ULONG) WinLepThumbnailProvider::AddRef() {
 
 IFACEMETHODIMP_(ULONG) WinLepThumbnailProvider::Release() {
 	unsigned long refCount = InterlockedDecrement(&m_refCount);
-	if (refCount == 0) {
-		if (m_pStream) {
-			m_pStream->Release();
-		}
+	if (!refCount) {
 
 		delete this;
 	}
@@ -75,46 +70,75 @@ IFACEMETHODIMP WinLepThumbnailProvider::Initialize(IStream *pStream, DWORD gfxMo
 		return HRESULT_FROM_WIN32(ERROR_ALREADY_INITIALIZED);
 	}
 
-	HRESULT hr = m_pStream->QueryInterface(&m_pStream);
+	HRESULT hr = pStream->QueryInterface(&m_pStream);
 
 	return hr;
 }
 
+Gdiplus::Bitmap *gdiplusImageToBitmap(Gdiplus::Image *img, Gdiplus::Color background = Gdiplus::Color::Transparent) {
+	Gdiplus::Bitmap *bmp = nullptr;
+	try {
+		int width = img->GetWidth();
+		int height = img->GetHeight();
+		auto format = img->GetPixelFormat();
+
+		bmp = new Gdiplus::Bitmap(width, height, format);
+		auto gfx = std::unique_ptr<Gdiplus::Graphics>(Gdiplus::Graphics::FromImage(bmp));
+
+		gfx->Clear(background);
+		gfx->DrawImage(img, 0, 0, width, height);
+	} catch (...) {
+		// this might happen if img->GetPixelFormat() is something exotic
+		// ... not sure
+		return nullptr;
+	}
+	return bmp;
+}
 
 IFACEMETHODIMP WinLepThumbnailProvider::GetThumbnail(UINT cx, HBITMAP *phbmp, WTS_ALPHATYPE *pwdAlpha) {
 	if (!phbmp || !pwdAlpha) {
 		return E_INVALIDARG;
 	}
-	// wlep thumbnail --> m_pThumbnailData  
-	HRESULT hr = ValidateAndReadHeader();
 
-	if (FAILED(hr)) {
-		return hr;
+	*phbmp = NULL;
+	*pwdAlpha = WTS_ALPHATYPE::WTSAT_UNKNOWN;
+
+	ULONG_PTR token;
+	Gdiplus::GdiplusStartupInput input;
+
+	if (GdiplusStartup(&token, &input, NULL) == Gdiplus::Status::Ok) {
+		HRESULT hr = ValidateAndReadHeader();
+		if (FAILED(hr)) {
+			return hr;
+		}
+
+		IStream *pImageStream = SHCreateMemStream(m_pThumbnailData, m_uThumbnailSize);
+		Gdiplus::Image *image = Gdiplus::Image::FromStream(pImageStream);
+
+		// Try to convert the thumbnail using dynamic cast
+		Gdiplus::Bitmap *pBitmap = dynamic_cast<Gdiplus::Bitmap *>(image);
+
+		// The thumbnail is an Image which is not a Bitmap. Convert.
+		if (!pBitmap) {
+			pBitmap = gdiplusImageToBitmap(image);
+		}
+
+		if (pBitmap->GetHBITMAP(Gdiplus::Color::Transparent, phbmp) != Gdiplus::Status::Ok) {
+			return E_FAIL;
+		}
+
 	}
 
-	*phbmp = nullptr;
-	*pwdAlpha = WTS_ALPHATYPE::WTSAT_RGB;
-
-	// Convert the jpg data to a stream
-	IStream *pImageStream = SHCreateMemStream(m_pThumbnailData, m_uThumbnailSize);
-
-	// Convert the stream to a bitmap
-	Gdiplus::Bitmap *pBitmap = new Gdiplus::Bitmap(pImageStream);
-
-	// Set the HBITMAP
-	if (pBitmap->GetHBITMAP(Gdiplus::Color::Transparent, phbmp) != Gdiplus::Status::Ok) {
-		delete pBitmap;
-		pImageStream->Release();
-
-		return E_FAIL;
+	Gdiplus::GdiplusShutdown(token);
+	if (*phbmp != NULL) {
+		return NOERROR;
 	}
 
-	delete pBitmap;
-	pImageStream->Release();
 	return S_OK;
 }
 
-HRESULT LeptonThumbnailProvider_CreateInstance(REFIID riid, void **ppv) {
+
+HRESULT WinLepThumbnailProvider_CreateInstance(REFIID riid, void **ppv) {
 	WinLepThumbnailProvider *pNew = new (std::nothrow) WinLepThumbnailProvider();
 	HRESULT hr = pNew ? S_OK : E_OUTOFMEMORY;
 	if (SUCCEEDED(hr)) {
@@ -171,7 +195,7 @@ HRESULT WinLepThumbnailProvider::ValidateAndReadHeader() {
 		return hr;
 	}
 	// Convert the read thumbnail size bytes to hex string and then convert it to a number
-	// Maybe there's a better way, but I couldn't find a better and simpler way\
+	// Maybe there's a better way, but I couldn't find a better and simpler way
 	// TODO: maybe memcpy() ?
 	std::string hex_str = "";
 	{
