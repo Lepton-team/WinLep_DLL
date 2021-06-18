@@ -97,6 +97,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>LeptonThumbnailProvider.def</ModuleDefinitionFile>
+      <AdditionalDependencies>shlwapi.lib;Gdiplus.lib;Propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -136,6 +137,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>LeptonThumbnailProvider.def</ModuleDefinitionFile>
+      <AdditionalDependencies>shlwapi.lib;Gdiplus.lib;Propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -157,6 +159,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <ModuleDefinitionFile>LeptonThumbnailProvider.def</ModuleDefinitionFile>
+      <AdditionalDependencies>shlwapi.lib;Gdiplus.lib;Propsys.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
